@@ -1,2 +1,1 @@
-## Network Architecture
-[![View Diagram](https://img.shields.io/badge/Mermaid-Diagram-blue)](./ARCHITECTURE.md)
+[![View Architecture Diagram](https://img.shields.io/badge/📊_Architecture_Diagram-Click_Here-blue)](./docs/architecture_diagram.md)
