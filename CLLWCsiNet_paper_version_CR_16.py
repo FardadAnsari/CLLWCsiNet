@@ -11,46 +11,7 @@ class ConvBN(nn.Sequential):
         ]))
 
         
-class MultiResolutionRefineBlock(nn.Module):
-    def __init__(self):
-        super(MultiResolutionRefineBlock, self).__init__()
-        
-        self.path1 = nn.Sequential(OrderedDict([
-            ('conv1x7', ConvBN(2, 4, [1,7])),
-            ("LeakyReLU_1",nn.LeakyReLU(negative_slope=0.3, inplace=True)),
-            ('conv7x1', ConvBN(4, 2, [7,1])),
-        ]))
-        
-        self.path2 = nn.Sequential(OrderedDict([
-            ('conv1x3', ConvBN(2, 4, [1, 3])),
-            ("LeakyReLU_1",nn.LeakyReLU(negative_slope=0.3, inplace=True)),
-            ('conv3x1', ConvBN(4, 2, [3, 3])),
-        ]))
 
-        self.path3= nn.Sequential(OrderedDict([
-            ('conv1x5', ConvBN(2, 4, [1, 5])),
-            ("PReLU_1",nn.LeakyReLU(negative_slope=0.3, inplace=True)),
-            ('conv5x1', ConvBN(4, 2, [5, 1])),
-        ]))
-        
-        self.conv1x1 = ConvBN(6, 2, 1)
-        self.identity = nn.Identity()
-        self.relu = nn.LeakyReLU(negative_slope=0.3, inplace=True) 
-        
-    def forward(self, x):
-        identity = self.identity(x)
-
-        out1 = self.path1(x)
-        out2 = self.path2(x)
-        out3 = self.path3(x)
-        x = torch.cat((out1, out2, out3), dim=1)
-        x = self.relu(x)
-        x = self.conv1x1(x)
-        x = self.relu(x + identity)
-
-        
-        return x
-        
 class RefineNet(nn.Module):
     def __init__(self, img_channels=2):
         super(RefineNet, self).__init__()
@@ -124,9 +85,9 @@ class Encoder_Compression(nn.Module):
     
     
 
-class CsiNet(nn.Module):
+class CLLWCsiNet(nn.Module):
     def __init__(self,reduction=4,residual_num=2):
-        super(CsiNet, self).__init__()
+        super(CLLWCsiNet, self).__init__()
         total_size, in_channel, w, h = 2048, 2, 32, 32
         
         self.encoder_p1 = nn.Sequential(OrderedDict([
@@ -199,26 +160,27 @@ class CsiNet(nn.Module):
                 nn.init.constant_(m.bias, 0)
         
         
-    def adding_noise(self,x):
-        # Compute signal power
+    def adding_noise(self, x):
+        # Ensure input is normalized to [0, 1]
+        assert x.min() >= 0 and x.max() <= 1, "Input must be in [0, 1] range. Normalize first!"
+        
+        # Compute signal power (assumes [0,1] range)
         signal_power = torch.mean(x**2)
-
-        # Define the desired SNR in dB (e.g., 20 dB)
-        SNR_dB = 40
-
-        # Compute the SNR in linear scale
-        SNR_linear = 10**(SNR_dB / 10)
-
-        # Compute the noise power based on the SNR
-        noise_power = signal_power / SNR_linear
-
-        # Generate Gaussian noise with the same shape as the input tensor
+        
+        # Set SNR (e.g., 20 dB)
+        snr_db = 40  
+        snr_linear = 10 ** (snr_db / 10)
+        
+        # Calculate noise power
+        noise_power = signal_power / snr_linear
+        
+        # Generate noise
         noise = torch.randn_like(x) * torch.sqrt(noise_power)
-
-        # Add the noise to the input tensor
-        x_noisy = x + noise
-
-        return x_noisy
+        
+        # Add noise and clip to maintain [0,1] range
+        noisy_x = torch.clamp(x + noise, 0, 1)
+        
+        return noisy_x
     
     
     
