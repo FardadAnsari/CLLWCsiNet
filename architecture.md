@@ -1,39 +1,31 @@
 ```mermaid
-flowchart TB
-    subgraph CLLWCsiNet["CLLWCsiNet (Main Network)"]
-        direction TB
-        Input[(2,32,32)] --> Encoder
-        Encoder --> |(64,1,32)| Compressor
-        Compressor --> |(4,1,32)| Noise
-        Noise --> Decoder
-        Decoder --> |(2,32,32)| Refiner
-        Refiner --> Output[(2,32,32)]
-    end
+graph LR
+    A[Input (N,2,32,32)] --> B[Encoder_P1]
+    A --> C[Encoder_P2]
+    A --> D[Encoder_P3]
+    B --> E[Concat]
+    C --> E
+    D --> E
+    E --> F[Conv1x1]
+    F --> G[Reshape]
+    G --> H[Encoder_Compression]
+    H --> I[Add Noise]
+    I --> J[Decoder_UE]
+    I --> K[remove_AGN]
+    J --> L[Subtract]
+    K --> L
+    L --> M[Reshape]
+    M --> N[RefineNet x2]
+    N --> O[Sigmoid]
 
-    subgraph Encoder["Encoder Block"]
-        P1["P1: [1,7]→[7,1]"]
-        P2["P2: [1,5]→[5,1]"]
-        P3["P3: [1,3]→[3,1]"]
-        Concat["Concat (6,32,32)"]
-        Conv1x1["Conv1x1 (2,32,32)"]
+    subgraph Encoder_P1
+        B1[1x7 Conv] --> B2[7x1 Conv]
     end
-
-    subgraph Compressor["Encoder_Compression"]
-        Path1["64→32→16→4"]
-        Path2["64→4"]
-        Merge["Concat (8,1,32)"]
-        Final["8→4"]
+    subgraph Encoder_P2
+        C1[1x5 Conv] --> C2[5x1 Conv]
     end
-
-    subgraph Decoder["Decoder Block"]
-        UE["UE Path: 4→8→16→64"]
-        AGN["remove_AGN: 4→8→16→64"]
-        Subtract["Subtract"]
-    end
-
-    subgraph Refiner["RefineNet x2"]
-        Conv1["Conv1x7 (2→8)"]
-        Conv2["Conv1x5 (2→8)"]
-        Merge["Concat (4,32,32)"]
-        Residual["Residual Add"]
+    subgraph Encoder_Compression
+        H1[64→32→16→4] --> H2[Concat]
+        H3[64→4] --> H2
+        H2 --> H4[8→4]
     end
