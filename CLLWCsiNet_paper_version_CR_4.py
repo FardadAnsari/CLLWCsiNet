@@ -153,20 +153,20 @@ class CsiNet(nn.Module):
                 nn.init.constant_(m.bias, 0)
         
         
-    def adding_noise(self,x):
-        signal_power = torch.mean(x**2)
+    # def adding_noise(self,x):
+    #     signal_power = torch.mean(x**2)
 
-        SNR_dB = 40
+    #     SNR_dB = 40
 
-        SNR_linear = 10**(SNR_dB / 10)
+    #     SNR_linear = 10**(SNR_dB / 10)
 
-        noise_power = signal_power / SNR_linear
+    #     noise_power = signal_power / SNR_linear
 
-        noise = torch.randn_like(x) * torch.sqrt(noise_power)
+    #     noise = torch.randn_like(x) * torch.sqrt(noise_power)
 
-        x_noisy = x + noise
+    #     x_noisy = x + noise
 
-        return x_noisy
+    #     return x_noisy
     
     
     
@@ -180,10 +180,10 @@ class CsiNet(nn.Module):
         x=self.LeakyReLU(x)
         x = x.contiguous().view(batch_size,64 ,1,32)
         x=self.encoder_compression(x)
-        x_noisy_feedback=self.adding_noise(x)
-        y=self.remove_AGN(x_noisy_feedback)
+        #x_noisy_feedback=self.adding_noise(x)
+        #y=self.remove_AGN(x)
         x=self.decoder_get_feedback_in_UE(x)
-        x=x-y
+        #x=x-y
         x=self.LeakyReLU(x)
         x = x.contiguous().view(batch_size,2 ,32,32)
         for layer in self.decoder_refine_net:
